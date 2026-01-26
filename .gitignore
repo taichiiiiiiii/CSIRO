@@ -1,0 +1,54 @@
+# Kaggle Data
+data/
+*.csv
+*.zip
+*.tar.gz
+train/
+test/
+input/
+
+# Model files
+*.pth
+*.pkl
+*.h5
+*.ckpt
+models/
+checkpoints/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+temp/
+
+# Output files
+output/
+submissions/
+results/
