@@ -156,11 +156,10 @@ class BiomassModel(nn.Module):
 # DATASET & TRANSFORMS
 # ============================================================
 class BiomassDataset(Dataset):
-    def __init__(self, df, transforms, image_dir, img_size=None):
+    def __init__(self, df, transforms, image_dir):
         self.df = df.reset_index(drop=True)
         self.transforms = transforms
         self.image_dir = Path(image_dir)
-        self.img_size = img_size
 
     def __len__(self):
         return len(self.df)
@@ -175,19 +174,13 @@ class BiomassDataset(Dataset):
         right = img[:, w//2:]
         
         if self.transforms:
-            # Apply transforms with current image size if specified
-            if self.img_size:
-                transform = self.transforms(self.img_size)
-            else:
-                transform = self.transforms
-                
             seed = random.randint(0, 99999)
             random.seed(seed)
             np.random.seed(seed)
-            left = transform(image=left)["image"]
+            left = self.transforms(image=left)["image"]
             random.seed(seed)
             np.random.seed(seed)
-            right = transform(image=right)["image"]
+            right = self.transforms(image=right)["image"]
         
         labels = torch.tensor([row[t] for t in CFG.TARGETS], dtype=torch.float32)
         return left, right, labels
@@ -383,15 +376,13 @@ def train_fold_improved(fold, df_wide):
         # Create datasets with current image size
         train_ds = BiomassDataset(
             train_df, 
-            lambda size: get_train_transforms(size), 
-            CFG.TRAIN_IMAGE_DIR, 
-            img_size
+            get_train_transforms(img_size), 
+            CFG.TRAIN_IMAGE_DIR
         )
         val_ds = BiomassDataset(
             val_df, 
-            lambda size: get_val_transforms(size), 
-            CFG.TRAIN_IMAGE_DIR, 
-            CFG.BASE_IMG_SIZE  # Always validate at base size
+            get_val_transforms(CFG.BASE_IMG_SIZE),  # Always validate at base size
+            CFG.TRAIN_IMAGE_DIR
         )
         
         train_loader = DataLoader(
