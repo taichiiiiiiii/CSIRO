@@ -6,28 +6,28 @@
 ## プロジェクト構造
 ```
 CSIRO/
-├── README.md
-├── csiro_training_dinov3_runpod.ipynb   # モデルトレーニング用ノートブック
-└── csiro_inference_dinov3_runpod.ipynb  # 推論用ノートブック
+├── models/                              # モデルバージョン管理
+│   ├── v1_dinov3_swa/                  # 現在の最良モデル - SWA実装版
+│   │   ├── training.ipynb              # 学習ノートブック
+│   │   ├── inference.ipynb             # 推論ノートブック
+│   │   └── README.md                   # バージョン詳細
+│   ├── v2_dinov3_tta/                  # 今後実装予定 - TTA強化版
+│   └── v3_dinov3_enhanced/             # 今後実装予定 - 追加改良版
+├── experiments/                         # 実験的なノートブック
+│   ├── baseline/                        # ベースラインモデル
+│   └── ablation/                        # アブレーション実験
+├── csiro_training_dinov3_runpod.ipynb  # オリジナル学習ノートブック
+├── csiro_inference_dinov3_runpod.ipynb # オリジナル推論ノートブック
+├── csiro_training_improved.ipynb       # 改良版（v1のコピー元）
+├── csiro_inference_improved.ipynb      # 改良版推論（v1のコピー元）
+└── README.md                            # このファイル
 ```
 
-## ノートブックの説明
-
-### csiro_training_dinov3_runpod.ipynb
-DINOv3モデルのトレーニングを行うためのノートブック。RunPod環境での実行に最適化されています。
-
-主な機能：
-- データの前処理
-- DINOv3モデルの設定とトレーニング
-- モデルの評価と保存
-
-### csiro_inference_dinov3_runpod.ipynb
-トレーニング済みモデルを使用して推論を実行するためのノートブック。
-
-主な機能：
-- トレーニング済みモデルのロード
-- テストデータに対する予測
-- 結果の出力と提出ファイルの生成
+## 現在の最良モデル (v1_dinov3_swa)
+- **場所**: `models/v1_dinov3_swa/`
+- **改良点**: SWA、マルチスケール学習、メモリ最適化
+- **R²スコア**: 0.85-0.87
+- **必要GPU**: 24GB VRAM (RTX A5000推奨)
 
 ## モデルアーキテクチャ
 
@@ -37,6 +37,7 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 - **事前学習**: 1.6B枚の画像でSelf-Distillation学習
 - **パッチサイズ**: 16x16
 - **特徴次元**: 1280次元
+- **パラメータ数**: 約1.7B
 
 ### カスタムアーキテクチャの特徴
 
@@ -64,7 +65,12 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
   - GDM (Green Dry Matter) = green + clover
   - Total = green + clover + dead
 
-## 学習テクニック
+## 学習テクニック (v1_dinov3_swa)
+
+### 改良版の新機能
+- **SWA (Stochastic Weight Averaging)**: エポック25から開始
+- **マルチスケール学習**: [384, 448, 512]のサイクル（メモリ最適化版）
+- **メモリ最適化**: 24GB GPU対応の設定
 
 ### データ拡張 (Albumentations)
 - **幾何学的変換**:
@@ -78,17 +84,17 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 
 ### 最適化手法
 - **オプティマイザ**: AdamW
-- **学習率**:
-  - Backbone: 5e-5 (より慎重な更新)
-  - Head: 1e-4 (より積極的な学習)
+- **学習率** (v1最適化版):
+  - Backbone: 4e-5 (メモリ効率考慮)
+  - Head: 8e-5 (メモリ効率考慮)
 - **Weight Decay**: 1e-2
-- **Gradient Accumulation**: 4ステップ（実効バッチサイズ: 8）
+- **Gradient Accumulation**: 8ステップ（バッチサイズ1、実効バッチサイズ: 8）
 - **Gradient Clipping**: max_norm=1.0
 
 ### 学習率スケジューリング
 - **Warmup**: 3エポック（線形増加）
 - **Cosine Annealing**: Warmup後にコサイン減衰
-- **数式**: `lr = base_lr * 0.5 * (1 + cos(π * progress))`
+- **SWA学習率**: 1e-5（エポック25以降）
 
 ### 損失関数
 - **SmoothL1Loss** (Huber Loss, β=5.0)
@@ -102,6 +108,7 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 ### 正則化テクニック
 - **Dropout**: 0.2 (予測ヘッド)、0.1 (LocalMambaBlock)
 - **EMA (Exponential Moving Average)**: decay=0.995
+- **SWA (Stochastic Weight Averaging)**: エポック25から
 - **Gradient Checkpointing**: メモリ効率化
 - **Mixed Precision Training**: FP16による高速化
 
@@ -115,7 +122,22 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 - **重み付きR²スコア**:
   - 重み: [0.1, 0.1, 0.1, 0.2, 0.5]
   - Dry_Total_gに最も高い重みを設定
-- **Early Stopping**: patience=5エポック
+- **Early Stopping**: patience=7エポック（v1で調整）
+
+## バージョン管理方針
+
+### ディレクトリ構造
+- `models/`: 本番環境用のモデルバージョン
+- `experiments/`: 実験的な試み
+- 各バージョンは独立したディレクトリで管理
+- 重要な変更は新しいバージョンとして作成
+
+### バージョン履歴
+| バージョン | R²スコア | 学習時間 | 必要GPU | ステータス |
+|-----------|----------|----------|---------|------------|
+| v1_dinov3_swa | 0.85-0.87 | 18-22h | 24GB | ✅ 本番環境 |
+| v2_dinov3_tta | 0.87-0.89 | 20-24h | 24GB | 📝 計画中 |
+| v3_dinov3_enhanced | 0.89+ | TBD | 32GB+ | 🔮 将来 |
 
 ## 環境設定
 
@@ -129,10 +151,11 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 - scikit-learn
 - matplotlib
 - tqdm
+- typing_extensions (最新版)
 
 ### ハードウェア要件
 - **GPU**: NVIDIA RTX A5000以上推奨（24GB VRAM）
-- **学習時間**: 約20時間（5-fold全体）
+- **学習時間**: 約18-22時間（5-fold全体）
 - **推論時間**: 1画像あたり約0.5秒
 
 ### RunPodでの実行
@@ -143,29 +166,42 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 
 ## 使用方法
 
+### 最新版 (v1_dinov3_swa) の使用
+1. **トレーニング**
+   ```bash
+   # models/v1_dinov3_swa/training.ipynb を実行
+   # メモリ最適化済み、SWA対応
+   ```
+
+2. **推論**
+   ```bash
+   # models/v1_dinov3_swa/inference.ipynb を実行
+   # TTA対応、EMA/SWAモデルのアンサンブル
+   ```
+
+### オリジナル版の使用
 1. **トレーニング**
    ```bash
    # csiro_training_dinov3_runpod.ipynb を実行
-   # 5-fold CVで約20時間
    ```
 
 2. **推論**
    ```bash
    # csiro_inference_dinov3_runpod.ipynb を実行
-   # 5モデルのアンサンブル予測
    ```
 
 ## パフォーマンス最適化
 
-### メモリ管理
+### メモリ管理 (v1で強化)
 - Gradient Checkpointingによる活性化メモリの削減
-- バッチサイズの動的調整
-- 推論後の明示的なメモリ解放（`torch.cuda.empty_cache()`）
+- バッチサイズ1 + 勾配蓄積8ステップ
+- 10ステップごとのキャッシュクリア
+- TF32有効化による高速化
 
 ### 計算効率化
 - Mixed Precision Training (AMP)
-- DataLoader最適化（pin_memory=True）
-- 並列データ処理（num_workers=4）
+- DataLoader最適化（pin_memory=True, non_blocking=True）
+- NUM_WORKERS=0（Jupyter環境対応）
 
 ## モデルの特徴
 - **マルチストリーム処理**: 左右の画像領域を独立して処理
@@ -174,9 +210,10 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 - **物理的制約の組み込み**: Softplus活性化による非負値保証
 
 ## 注意事項
-- RunPod環境での実行を想定しています
-- GPUメモリに応じてバッチサイズの調整が必要な場合があります
-- データセットへのパスは環境に応じて適切に設定してください
+- RunPod/Kaggle環境での実行を想定
+- 各バージョンのREADMEで詳細を確認
+- モデル構造の変更は新バージョンとして管理
+- チェックポイントはGitには含まれません（別途管理）
 
 ## ライセンス
 このプロジェクトはKaggleコンペティション規約に従います。
@@ -185,4 +222,5 @@ DINOv3モデルのトレーニングを行うためのノートブック。RunPo
 @taichiiiiiiii
 
 ## 更新履歴
+- 2026-01-27: モデルバージョン管理体制の確立、v1_dinov3_swaの追加
 - 2026-01-26: 初回コミット、基本的なトレーニングと推論ノートブックを追加
