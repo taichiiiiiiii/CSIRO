@@ -1,24 +1,51 @@
+# ============================================
+# Credentials / Secrets  (NEVER commit these)
+# ============================================
+kaggle.json
+.kaggle/
+.env
+.env.*
+*.pem
+*.key
+*_credentials*
+*secret*
+
+# ============================================
 # Kaggle Data
+# ============================================
 data/
 *.csv
 *.zip
 *.tar.gz
+*.parquet
 train/
 test/
 input/
 
-# Model files
+# ============================================
+# Model files / checkpoints
+# ============================================
 *.pth
+*.pt
 *.pkl
 *.h5
 *.ckpt
+*.safetensors
+*.onnx
+*.bin
+*.npy
+*.npz
 checkpoints/
 
+# ============================================
 # Jupyter Notebook
+# ============================================
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
+# ============================================
 # Python
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,26 +55,28 @@ env/
 venv/
 .venv
 
+# ============================================
 # IDE
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# ============================================
 # OS
+# ============================================
 .DS_Store
 Thumbs.db
 
-# Logs
+# ============================================
+# Logs / Temporary / Output
+# ============================================
 *.log
 logs/
-
-# Temporary files
 *.tmp
 temp/
-
-# Output files
 output/
 submissions/
 results/
