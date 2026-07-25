@@ -1,54 +1,59 @@
 # Model Versions Directory
 
+モデルはバージョンごとに独立したディレクトリで管理します。
+
 ## Structure
+
 ```
 models/
-├── v1_dinov3_swa/        # Current best - DINOv3 with SWA & multi-scale
-├── v2_dinov3_tta/        # Future - Enhanced TTA version
-├── v3_dinov3_enhanced/   # Future - Additional improvements
+├── v1_dinov3_swa/        # v1: DINOv3 + SWA + マルチスケール学習（安定版）
+├── v2_spatial_pooling/   # v2: SpatialAwarePooling による空間情報保持（実験版）
+├── v3_complete_fix/      # v3: アーキテクチャ総合修正（最新・実験版）
 └── README.md             # This file
 ```
 
-## Version History
+## Version Comparison
 
-### v1_dinov3_swa (Current)
-- **Base Model**: DINOv3 ViT-Huge+ (1.7B params)
-- **Improvements**: SWA, Multi-scale training, EMA
-- **Memory**: Optimized for 24GB GPUs
-- **R2 Score**: ~0.85-0.87
-- **Status**: ✅ Production ready
+| Version | 主な変更点 | Val R²（実測） | ステータス |
+|---------|-----------|----------------|------------|
+| v1_dinov3_swa | SWA / EMA / マルチスケール学習 | 0.85–0.87 | ✅ 安定版 |
+| v2_spatial_pooling | AdaptiveAvgPool1d → SpatialAwarePooling、物理制約付き損失 | 未検証 | 🧪 実験版 |
+| v3_complete_fix | CrossAttention ステレオ融合、Kaggle互換Mamba、物理制約統一 | 未検証 | 🧪 実験版（最新） |
 
-### v2_dinov3_tta (Planned)
-- **Base**: v1 + Enhanced TTA
-- **Improvements**: 
-  - 5-fold TTA (original, hflip, vflip, rotate90, rotate270)
-  - Weighted ensemble of EMA and SWA models
-- **Expected R2**: ~0.87-0.89
+> **Note**: v2 / v3 のスコアは学習未完了のため実測値がありません。
+> 検証が完了するまでは v1 を提出用のベースラインとして使用してください。
 
-### v3_dinov3_enhanced (Future)
-- **Potential improvements**:
-  - Larger image sizes if GPU allows
-  - Cross-validation ensemble
-  - Advanced augmentation strategies
-  - Post-processing optimization
+## 各バージョンの内容
 
-## Model Comparison
+### v1_dinov3_swa（安定版）
+- **Base Model**: DINOv3 ViT-Huge+（timm: `vit_huge_plus_patch16_dinov3.lvd1689m`）
+- **改善点**: SWA、マルチスケール学習 [384, 448, 512]、EMA (decay 0.995)
+- **メモリ**: 24GB GPU 向けに最適化
+- 詳細は `v1_dinov3_swa/README.md` を参照
 
-| Version | R2 Score | Training Time | GPU Required | Status |
-|---------|----------|---------------|--------------|--------|
-| v1_dinov3_swa | 0.85-0.87 | 18-22h | 24GB | Ready |
-| v2_dinov3_tta | 0.87-0.89 | 20-24h | 24GB | Planned |
-| v3_dinov3_enhanced | 0.89+ | TBD | 32GB+ | Future |
+### v2_spatial_pooling（実験版）
+- v1 の AdaptiveAvgPool1d を SpatialAwarePooling に置換し空間情報を保持
+- 物理制約付き損失関数、軽量ステレオ融合
+- 詳細は `v2_spatial_pooling/README.md` を参照
+
+### v3_complete_fix（実験版・最新）
+- CrossAttention によるステレオ相互作用、Kaggle 互換 Mamba ブロック
+- 学習・推論での物理制約の統一、安全なチェックポイントロード
+- **`training_fixed.ipynb` / `inference_fixed.ipynb` が正式版**（無印は旧ドラフト）
+- 詳細は `v3_complete_fix/README.md` を参照
 
 ## Usage
-Each version directory contains:
-- `training.ipynb`: Complete training notebook
-- `inference.ipynb`: Inference notebook for Kaggle
-- `README.md`: Detailed version documentation
-- Model checkpoints (not in Git, stored separately)
+
+各バージョンのディレクトリ構成:
+- `training*.ipynb`: 学習ノートブック
+- `inference*.ipynb`: 推論ノートブック（Kaggle 提出用）
+- `README.md`: バージョン詳細ドキュメント
+- チェックポイント（`*.pth`）は Git 管理外（別途保管）
 
 ## Best Practices
-1. Always test new architectures in a new version directory
-2. Document changes thoroughly in version README
-3. Keep baseline versions for comparison
-4. Tag Git commits with version numbers
+
+1. 新しいアーキテクチャは必ず新しいバージョンディレクトリで試す
+2. 変更内容は各バージョンの README に記録する
+3. 比較のためベースラインバージョンを残す
+4. 実測スコアと期待値（未検証）を区別して記載する
+5. チェックポイントのロードは必ず `torch.load(..., weights_only=True)` を使う（[SECURITY.md](../SECURITY.md) 参照）

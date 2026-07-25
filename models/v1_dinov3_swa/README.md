@@ -56,6 +56,7 @@ USE_FP16 = True
 ## Files
 - `training.ipynb`: Full training notebook with SWA
 - `inference.ipynb`: T4×2 optimized inference (main)
+- `inference_t4x2.ipynb`: T4×2 version (self-contained model definition)
 - `inference_t4x2_standalone.ipynb`: Alternative T4×2 version
 - `inference_p100.ipynb`: P100-specific version
 
